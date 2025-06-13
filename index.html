@@ -91,12 +91,17 @@
             flex-wrap: wrap;
             max-width: 80%;
         }
+    
+
+    .frase-solidariedade p {
+        flex: 1; /* Ocupa o espaço disponível */
+        text-align: left; /* Alinha o texto à esquerda */
+        max-width: calc(100% - 150px); /* Evita que o texto fique muito largo */
+    }
         
-        .foto-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
+    .foto-container {
+           width: 120px; /* Largura fixa para a foto */
+    flex-shrink: 0; /* Impede que a foto diminua */
         }
         
         .foto-pessoa {
@@ -362,7 +367,7 @@
             <h2>Participe com R$10,00 e concorra a R$ 300</h2>
             
             <div class="frase-solidariedade">
-                <p>Solidariedade não tem endereço, qualquer ajuda conta</p>
+               <p>Nossa amiga Sandra Regina está enfrentando um momento difícil: dois tumores (próximos à coluna e à garganta) estão afetando sua saúde. Para iniciar o tratamento, ela precisa passar por uma biópsia cirúrgica, com custo aproximado de R$ 15 mil. Você pode ajudar comprando um ponto da rifa ou divulgando para amigos e familiares. <strong style="color: #800080;">Solidariedade não tem endereço, qualquer ajuda conta!</strong></p>
                 <div class="foto-container">
                     <div class="foto-pessoa">
                         <!-- Espaço para foto - substitua pelo caminho da imagem -->
