@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rifa Solidária</title>
@@ -95,7 +98,7 @@
 
     .frase-solidariedade p {
         flex: 1; /* Ocupa o espaço disponível */
-        text-align: left; /* Alinha o texto à esquerda */
+        text-align: center; /* Alinha o texto à esquerda */
         max-width: calc(100% - 150px); /* Evita que o texto fique muito largo */
     }
         
@@ -103,6 +106,33 @@
            width: 120px; /* Largura fixa para a foto */
     flex-shrink: 0; /* Impede que a foto diminua */
         }
+
+        /* Responsividade para tablets (768px ou menos) */
+@media (max-width: 768px) {
+    .frase-solidariedade {
+        flex-direction: column; /* Empilha verticalmente */
+        gap: 15px;
+    }
+    
+    .foto-container {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
+}
+
+/* Responsividade para celulares (480px ou menos) */
+@media (max-width: 480px) {
+    .frase-solidariedade p {
+        font-size: 0.9rem; /* Reduz o tamanho do texto */
+        line-height: 1.5; /* Melhora a legibilidade */
+    }
+    
+    .foto-pessoa {
+        width: 100px;
+        height: 100px;
+    }
+}
         
         .foto-pessoa {
             width: 120px;
@@ -417,102 +447,139 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const numerosRifa = document.getElementById('numerosRifa');
-            const totalNumeros = 300;
-            const disponiveisElement = document.getElementById('disponiveis');
-            const vendidosElement = document.getElementById('vendidos');
-            const filtroBtns = document.querySelectorAll('.filtro-btn');
-            
-            // Carrega números já vendidos do localStorage
-            let numerosVendidos = JSON.parse(localStorage.getItem('numerosVendidos')) || [];
-            atualizarContadores();
-            
-            // Cria os números de 1 a 300
-            for (let i = 1; i <= totalNumeros; i++) {
-                const numeroElement = document.createElement('button');
-                numeroElement.className = 'numero';
-                numeroElement.textContent = i;
-                numeroElement.dataset.numero = i;
-                
-                // Verifica se o número já foi vendido
-                if (numerosVendidos.includes(i)) {
-                    numeroElement.classList.add('vendido');
-                }
-                
-                // Adiciona evento de clique
-                numeroElement.addEventListener('click', function() {
-                    const numero = parseInt(this.dataset.numero);
-                    const isVendido = this.classList.contains('vendido');
-                    
-                    if (isVendido) {
-                        // Se já está vendido, perguntar se quer desmarcar
-                        if (confirm(`Deseja desmarcar o número ${numero} como disponível?`)) {
-                            this.classList.remove('vendido');
-                            numerosVendidos = numerosVendidos.filter(n => n !== numero);
-                            localStorage.setItem('numerosVendidos', JSON.stringify(numerosVendidos));
-                            atualizarContadores();
-                        }
-                    } else {
-                        // Se não está vendido, perguntar se quer marcar
-                        if (confirm(`Deseja marcar o número ${numero} como vendido?`)) {
-                            this.classList.add('vendido');
-                            if (!numerosVendidos.includes(numero)) {
-                                numerosVendidos.push(numero);
-                                localStorage.setItem('numerosVendidos', JSON.stringify(numerosVendidos));
-                            }
-                            atualizarContadores();
-                        }
-                    }
-                });
-                
-                numerosRifa.appendChild(numeroElement);
+  // Configuração do Firebase (SUAS CREDENCIAIS)
+  const firebaseConfig = {
+    apiKey: "AIzaSyAhzbfkY_Wzyd5pBpWMCueQZJ3Qfr8_ltg",
+    authDomain: "rifa-solidaria-8b649.firebaseapp.com",
+    projectId: "rifa-solidaria-8b649",
+    storageBucket: "rifa-solidaria-8b649.appspot.com",
+    messagingSenderId: "941314195774",
+    appId: "1:941314195774:web:e1eb6f7580a1141e552c6f"
+  };
+
+  // Inicialize o Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  document.addEventListener('DOMContentLoaded', async function() {
+    const numerosRifa = document.getElementById('numerosRifa');
+    const totalNumeros = 300;
+    const disponiveisElement = document.getElementById('disponiveis');
+    const vendidosElement = document.getElementById('vendidos');
+    const filtroBtns = document.querySelectorAll('.filtro-btn');
+    
+    // Configuração do administrador (MANTIDO IGUAL)
+    const SENHA_PROGRAMADOR = "admin123";
+    const ehProgramador = () => prompt("Digite a senha de administrador:") === SENHA_PROGRAMADOR;
+
+    // Referência do Firestore (SUBSTITUIU localStorage)
+    const rifaRef = db.collection("rifa").doc("numeros");
+    
+    // Carrega números do Firestore
+    let numerosVendidos = [];
+    
+    async function carregarNumeros() {
+      const doc = await rifaRef.get();
+      numerosVendidos = doc.exists ? doc.data().vendidos || [] : [];
+      atualizarContadores();
+      renderizarNumeros();
+    }
+
+    async function salvarNumeros() {
+      await rifaRef.set({ vendidos: numerosVendidos });
+    }
+
+    // Função para renderizar os números (MANTIDA IGUAL)
+    function renderizarNumeros() {
+      numerosRifa.innerHTML = '';
+      
+      for (let i = 1; i <= totalNumeros; i++) {
+        const numeroElement = document.createElement('button');
+        numeroElement.className = 'numero';
+        numeroElement.textContent = i;
+        numeroElement.dataset.numero = i;
+        
+        if (numerosVendidos.includes(i)) {
+          numeroElement.classList.add('vendido');
+        }
+        
+        numeroElement.addEventListener('click', async function() {
+          const numero = parseInt(this.dataset.numero);
+          const isVendido = this.classList.contains('vendido');
+          
+          if (isVendido) {
+            if (ehProgramador() && confirm(`Liberar número ${numero}?`)) {
+              numerosVendidos = numerosVendidos.filter(n => n !== numero);
+              await salvarNumeros();
+              this.classList.remove('vendido');
+              atualizarContadores();
             }
-            
-            // Filtros
-            filtroBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const filtro = this.dataset.filtro;
-                    
-                    // Atualiza botões ativos
-                    filtroBtns.forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    
-                    // Aplica filtro
-                    const numeros = document.querySelectorAll('.numero');
-                    numeros.forEach(numero => {
-                        const isVendido = numero.classList.contains('vendido');
-                        
-                        switch(filtro) {
-                            case 'todos':
-                                numero.style.display = 'flex';
-                                break;
-                            case 'disponiveis':
-                                numero.style.display = isVendido ? 'none' : 'flex';
-                                break;
-                            case 'vendidos':
-                                numero.style.display = isVendido ? 'flex' : 'none';
-                                break;
-                        }
-                    });
-                });
-            });
-            
-            // Atualiza contadores
-            function atualizarContadores() {
-                const vendidos = numerosVendidos.length;
-                const disponiveis = totalNumeros - vendidos;
-                
-                vendidosElement.textContent = vendidos;
-                disponiveisElement.textContent = disponiveis;
-                
-                // Efeito de pulse quando há mudanças
-                if (vendidos > 0) {
-                    vendidosElement.classList.add('pulse');
-                    setTimeout(() => vendidosElement.classList.remove('pulse'), 1500);
-                }
+          } else {
+            if (confirm(`Marcar número ${numero} como vendido?`)) {
+              numerosVendidos.push(numero);
+              await salvarNumeros();
+              this.classList.add('vendido');
+              atualizarContadores();
             }
+          }
         });
-    </script>
+        
+        numerosRifa.appendChild(numeroElement);
+      }
+    }
+
+    // Atualização em tempo real (NOVO)
+    rifaRef.onSnapshot((doc) => {
+      if (doc.exists) {
+        numerosVendidos = doc.data().vendidos || [];
+        atualizarContadores();
+        
+        // Atualiza visualmente os números
+        document.querySelectorAll('.numero').forEach(num => {
+          const numValue = parseInt(num.dataset.numero);
+          num.classList.toggle('vendido', numerosVendidos.includes(numValue));
+        });
+      }
+    });
+
+    // Filtros (MANTIDO EXATAMENTE IGUAL)
+    filtroBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const filtro = this.dataset.filtro;
+        
+        filtroBtns.forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        
+        const numeros = document.querySelectorAll('.numero');
+        numeros.forEach(numero => {
+          const isVendido = numero.classList.contains('vendido');
+          
+          switch(filtro) {
+            case 'todos': numero.style.display = 'flex'; break;
+            case 'disponiveis': numero.style.display = isVendido ? 'none' : 'flex'; break;
+            case 'vendidos': numero.style.display = isVendido ? 'flex' : 'none'; break;
+          }
+        });
+      });
+    });
+
+    // Atualiza contadores (MANTIDO IGUAL)
+    function atualizarContadores() {
+      const vendidos = numerosVendidos.length;
+      const disponiveis = totalNumeros - vendidos;
+      
+      vendidosElement.textContent = vendidos;
+      disponiveisElement.textContent = disponiveis;
+      
+      if (vendidos > 0) {
+        vendidosElement.classList.add('pulse');
+        setTimeout(() => vendidosElement.classList.remove('pulse'), 1500);
+      }
+    }
+
+    // Inicia o carregamento
+    await carregarNumeros();
+  });
+</script>
 </body>
 </html>
